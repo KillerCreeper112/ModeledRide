@@ -1,0 +1,11 @@
+name: ModeledRide
+version: 1.0
+author: killercreepr
+main: killercreepr.modeledride.ModeledRide
+website: https://discord.gg/7fFJG75
+api-version: '1.21'
+depend: [ModelEngine]
+commands:
+  modeledride:
+    aliases: [mr]
+    permission: modeledride.cmds.modeledride.use
