@@ -37,6 +37,7 @@ public class ModeledRide extends JavaPlugin implements Listener {
         ModelResult result = getNearestModelResult(e);
         if(result == null) return;
         ActiveModel model = result.model();
+        if(locked.contains(model.getBlueprint().getName())) return;
         for (String seatBoneID : result.seatBones()) {
             ModelBone bone = model.getBone(seatBoneID).orElseThrow();
             Mount mount = bone.getBoneBehavior(BoneBehaviorTypes.MOUNT).orElseThrow();
