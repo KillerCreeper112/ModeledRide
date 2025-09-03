@@ -1,6 +1,7 @@
 package killercreepr.modeledride;
 
 import com.ticxo.modelengine.api.ModelEngineAPI;
+import com.ticxo.modelengine.api.events.ModelDismountEvent;
 import com.ticxo.modelengine.api.model.ActiveModel;
 import com.ticxo.modelengine.api.model.ModeledEntity;
 import com.ticxo.modelengine.api.model.bone.BoneBehaviorTypes;
@@ -12,8 +13,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
@@ -29,6 +34,38 @@ public class ModeledRide extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+    public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
+        if(!event.isSneaking()) return;
+        Player p = event.getPlayer();
+        RideMountController controller = mounted.get(p.getUniqueId());
+        if(controller == null) return;
+        if(controller.isLocked()) return;
+        mounted.remove(p.getUniqueId());
+        controller.getModel().getMountManager().ifPresent(manager ->{
+            manager.dismountRider(p);
+        });
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onModelDismount(ModelDismountEvent event) {
+        mounted.remove(event.getPassenger().getUniqueId());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onEntityDismount(EntityDismountEvent event) {
+        mounted.remove(event.getEntity().getUniqueId());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        mounted.remove(event.getPlayer().getUniqueId());
+    }
+
+
+    protected final Map<UUID, RideMountController> mounted = new HashMap<>();
+
+
     @EventHandler(ignoreCancelled = true)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         Player p = event.getPlayer();
@@ -43,7 +80,12 @@ public class ModeledRide extends JavaPlugin implements Listener {
             Mount mount = bone.getBoneBehavior(BoneBehaviorTypes.MOUNT).orElseThrow();
             if(!mount.canMountMore()) continue;
             model.getMountManager().orElseThrow().mountPassenger(
-                mount, p, (entity, mount1) -> new RideMountController(entity, mount1, (activeModel) -> locked.contains(activeModel.getBlueprint().getName()))
+                mount, p, (entity, mount1) ->{
+                    RideMountController controller = new RideMountController(entity, mount1,
+                        activeModel -> locked.contains(activeModel.getBlueprint().getName()), model);
+                    mounted.put(entity.getUniqueId(), controller);
+                    return controller;
+                }
             );
             break;
         }

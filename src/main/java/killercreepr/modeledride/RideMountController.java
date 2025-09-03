@@ -10,9 +10,23 @@ import java.util.function.Function;
 
 public class RideMountController extends AbstractMountController {
     protected final Function<ActiveModel,Boolean> locked;
-    public RideMountController(Entity entity, Mount mount, Function<ActiveModel,Boolean> locked) {
+    protected final ActiveModel model;
+    public RideMountController(Entity entity, Mount mount, Function<ActiveModel,Boolean> locked, ActiveModel model) {
         super(entity, mount);
         this.locked = locked;
+        this.model = model;
+    }
+
+    public boolean isLocked(){
+        return getLocked().apply(model);
+    }
+
+    public ActiveModel getModel() {
+        return model;
+    }
+
+    public Function<ActiveModel, Boolean> getLocked() {
+        return locked;
     }
 
     @Override
